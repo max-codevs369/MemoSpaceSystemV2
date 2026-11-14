@@ -64,3 +64,23 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = _bool(os.environ.get("SESSION_COOKIE_SECURE"), IS_PRODUCTION)
     PERMANENT_SESSION_LIFETIME = timedelta(days=365 * 5)
+    SESSION_REFRESH_EACH_REQUEST = True
+
+    WTF_CSRF_TIME_LIMIT = None
+    MAX_CONTENT_LENGTH = 1 * 1024 * 1024
+
+    NOTE_TITLE_MAX = 255
+    NOTE_CONTENT_MAX = 100_000
+    NAME_MAX = 100
+    NOTES_PER_PAGE = 12
+
+
+class TestConfig(Config):
+    TESTING = True
+    DEBUG = False
+    SECRET_KEY = "test-secret-key-not-for-production"
+    SQLALCHEMY_DATABASE_URI = "sqlite://"
+    SQLALCHEMY_ENGINE_OPTIONS = {}
+    WTF_CSRF_ENABLED = True
+    SESSION_COOKIE_SECURE = False
+    AUTO_CREATE_TABLES = True

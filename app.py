@@ -19,6 +19,12 @@ def create_app(config_object=Config) -> Flask:
             "(python -c \"import secrets; print(secrets.token_hex(32))\")."
         )
 
+    hops = app.config.get("PROXY_HOPS", 0)
+    if hops:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops, x_host=hops)
+
     db.init_app(app)
     csrf.init_app(app)
 
@@ -122,6 +128,7 @@ def _register_cli(app):
             conn = pymysql.connect(
                 host=url.host, port=url.port or 3306, user=url.username, password=url.password or "",
                 charset="utf8mb4",
+                **ssl_connect_args(),
             )
             try:
                 with conn.cursor() as cur:

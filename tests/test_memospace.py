@@ -464,3 +464,63 @@ def test_theme_switcher_is_in_profile_menu(client):
 def test_onboarding_has_theme_cycle_button(client):
     html = client.get("/onboarding").get_data(as_text=True)
     assert "data-theme-cycle" in html
+
+
+def test_ssl_connect_args_follow_environment(monkeypatch):
+    import config
+
+    monkeypatch.delenv("DB_SSL", raising=False)
+    monkeypatch.delenv("DB_SSL_CA", raising=False)
+    assert config.ssl_connect_args() == {}
+
+    monkeypatch.setenv("DB_SSL", "true")
+    assert config.ssl_connect_args() == {"ssl_verify_cert": True, "ssl_verify_identity": True}
+
+    monkeypatch.setenv("DB_SSL_CA", "/etc/ssl/certs/ca.pem")
+    assert config.ssl_connect_args()["ssl_ca"] == "/etc/ssl/certs/ca.pem"
+
+
+def test_pymysql_accepts_ssl_arguments():
+    import pymysql
+
+    with pytest.raises(pymysql.err.OperationalError):
+        pymysql.connect(
+            host="127.0.0.1", port=1, user="x", password="x", connect_timeout=1,
+            ssl_verify_cert=True, ssl_verify_identity=True,
+        )
+
+
+def test_proxy_headers_are_trusted_only_when_configured():
+    from flask import request
+
+    from app import create_app
+    from config import TestConfig
+
+    class Proxied(TestConfig):
+        PROXY_HOPS = 1
+
+    def probe(app):
+        @app.get("/_ip")
+        def ip():
+            return request.remote_addr
+
+        return app.test_client().get("/_ip", headers={"X-Forwarded-For": "203.0.113.7"}).get_data(as_text=True)
+
+    assert probe(create_app(Proxied)) == "203.0.113.7"
+    assert probe(create_app(TestConfig)) != "203.0.113.7"
+
+
+def test_empty_proxy_hops_value_falls_back_to_default(monkeypatch):
+    import importlib
+
+    import config
+
+    monkeypatch.setenv("PROXY_HOPS", "")
+    monkeypatch.setenv("APP_ENV", "production")
+    try:
+        reloaded = importlib.reload(config)
+        assert reloaded.Config.PROXY_HOPS == 1
+    finally:
+        monkeypatch.delenv("PROXY_HOPS")
+        monkeypatch.delenv("APP_ENV")
+        importlib.reload(config)

@@ -4,7 +4,7 @@ from flask_wtf.csrf import CSRFError
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 
-from config import Config
+from config import Config, ssl_connect_args
 from extensions import csrf, db
 from utils import fmt_date, fmt_date_short, fmt_time, now_local
 
